@@ -21,5 +21,7 @@ def create_user():
         abort(400)
     if any((c not in alphanum for c in request.form["username"])):
         abort(400)
+    if mongo.db.users.find({"username":request.form["username"]}) is not None:
+        abort(400)
     mongo.db.users.insert_one({"username":request.form["username"],"notelist":list()})
     return ('',204)

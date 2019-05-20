@@ -1,9 +1,35 @@
 from secure_notes_server import app, mongo
-from flask import request, abort
+from .auth import generate_token, validate_token, validate_password, compute_password_hash
+from .auth import basic_auth, token_auth
+
+from flask import request, abort, jsonify
 
 import html
+import string
 
-alphanum="1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM"
+valid_username_chars=string.digits+string.ascii_letters+string.punctuation+" "
+valid_password_chars=string.digits+string.ascii_letters+string.punctuation+" "
+
+@app.route("/login", methods=["POST"])
+@basic_auth.login_required
+def login_token():
+    username=request.authorization["username"]
+    # basic auth stuff already checked password
+    try:
+        token, expiration=generate_token(username)
+    except ValueError:
+        abort(403) # Forbidden
+    return jsonify({"token":token,"token_expiration":expiration})
+
+@app.route("/tokentest")
+@token_auth.login_required
+def test_token():
+    auth_text=request.headers["Authorization"]
+    auth_list=auth_text.split()
+    if auth_list[0]!="Bearer":
+        abort(400) # Bad request
+    # Entry already guaranteed to exist by previous token verification stuff
+    return str(mongo.db.tokens.find_one({"token":auth_list[1]})["username"])
 
 @app.route("/listusers")
 def list_users():
@@ -14,14 +40,28 @@ def list_users():
 
 @app.route("/createuser", methods=["POST"])
 def create_user():
-    # TODO: add messages for the errors
-    if len(request.form)!=1:
+    # TODO: add messages for the bad request errors
+    print("Start")
+    if any((c not in valid_username_chars for c in request.authorization["username"])):
         abort(400)
-    if "username" not in request.form:
+    print("Username contents valid")
+    if any((c not in valid_password_chars for c in request.authorization["password"])):
         abort(400)
-    if any((c not in alphanum for c in request.form["username"])):
-        abort(400)
-    if mongo.db.users.find({"username":request.form["username"]}) is not None:
-        abort(400)
-    mongo.db.users.insert_one({"username":request.form["username"],"notelist":list()})
-    return ('',204)
+    print("Password contents valid")
+    if mongo.db.users.count_documents({"username":request.authorization["username"]})!=0:
+        cursor=mongo.db.users.find({"username":request.authorization["username"]})
+        print(cursor)
+        for element in cursor:
+            print(element)
+        abort(403)
+    print("Username does not exist")
+    insert_document={"username":request.authorization["username"],
+                     "password":compute_password_hash(request.authorization["password"]),
+                     "notelist":list()}
+    mongo.db.users.insert_one(insert_document)
+    return '',204
+
+@app.route("/deleteuser", methods=["POST"])
+def remove_user():
+    #if request.headers[]
+    pass

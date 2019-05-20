@@ -7,6 +7,8 @@ name = "pypi"
 flask = "*"
 pymongo = "*"
 flask-pymongo = "*"
+flask-httpauth = "*"
+passlib = {extras = ["argon2"], version = "*"}
 
 [dev-packages]
 

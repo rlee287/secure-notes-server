@@ -21,6 +21,13 @@ def login_token():
         abort(403) # Forbidden
     return jsonify({"token":token,"token_expiration":expiration})
 
+@app.route("/logout", methods=["POST"])
+@token_auth.login_required
+def logout_token():
+    mongo.db.tokens.find_one_and_delete({"username":g.username})
+    assert mongo.db.tokens.count_documents({"username":g.username})==0
+    return '',204
+
 @app.route("/tokentest")
 @token_auth.login_required
 def test_token():

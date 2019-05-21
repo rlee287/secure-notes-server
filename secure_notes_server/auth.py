@@ -68,7 +68,6 @@ def validate_password(username, password):
     if verify_result:
         g.username=username
     return verify_result
-#g context?
 
 def compute_password_hash(password):
     return pwd_context.hash(password)

@@ -3,6 +3,7 @@ from flask_pymongo import PyMongo
 
 import configparser
 import os
+import atexit
 
 appconfig=configparser.ConfigParser()
 appconfig.read("serverconfig.cfg")
@@ -22,6 +23,11 @@ else:
     app.config["SECRET_KEY"]=os.urandom(32)
 
 mongo=PyMongo(app)
+
+@atexit.register
+def remove_token_db():
+    print("Dropping remaining tokens")
+    mongo.db.drop_collection("tokens")
 
 from secure_notes_server import routes
 _ = routes

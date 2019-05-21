@@ -1,6 +1,6 @@
 from secure_notes_server import mongo
 
-from flask import request
+from flask import request, g
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from passlib.context import CryptContext
 
@@ -52,7 +52,7 @@ def validate_token(token):
     document=mongo.db.tokens.find_one({"token":token})
     if document["expire_time"]<datetime.utcnow():
         return False
-    #g context?
+    g.username=document["username"]
     return True
 
 @basic_auth.verify_password
@@ -64,7 +64,10 @@ def validate_password(username, password):
         compute_password_hash(password)
         return False
     userdb_entry=mongo.db.users.find({"username":request.authorization["username"]})
-    return pwd_context.verify(password, userdb_entry[0]["password"])
+    verify_result=pwd_context.verify(password, userdb_entry[0]["password"])
+    if verify_result:
+        g.username=username
+    return verify_result
 #g context?
 
 def compute_password_hash(password):

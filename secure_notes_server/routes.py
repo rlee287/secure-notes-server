@@ -2,7 +2,7 @@ from secure_notes_server import app, mongo
 from .auth import generate_token, validate_token, validate_password, compute_password_hash
 from .auth import basic_auth, token_auth
 
-from flask import request, abort, jsonify
+from flask import request, abort, jsonify, g
 
 import html
 import string
@@ -13,10 +13,10 @@ valid_password_chars=string.digits+string.ascii_letters+string.punctuation+" "
 @app.route("/login", methods=["POST"])
 @basic_auth.login_required
 def login_token():
-    username=request.authorization["username"]
+    #username=request.authorization["username"]
     # basic auth stuff already checked password
     try:
-        token, expiration=generate_token(username)
+        token, expiration=generate_token(g.username)
     except ValueError:
         abort(403) # Forbidden
     return jsonify({"token":token,"token_expiration":expiration})
@@ -24,12 +24,12 @@ def login_token():
 @app.route("/tokentest")
 @token_auth.login_required
 def test_token():
-    auth_text=request.headers["Authorization"]
-    auth_list=auth_text.split()
-    if auth_list[0]!="Bearer":
-        abort(400) # Bad request
+    #auth_text=request.headers["Authorization"]
+    #auth_list=auth_text.split()
+    #if auth_list[0]!="Bearer":
+    #    abort(400) # Bad request
     # Entry already guaranteed to exist by previous token verification stuff
-    return str(mongo.db.tokens.find_one({"token":auth_list[1]})["username"])
+    return g.username
 
 @app.route("/listusers")
 def list_users():

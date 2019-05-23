@@ -1,9 +1,11 @@
 from flask import Flask
 from flask_pymongo import PyMongo
 
+import atexit
 import configparser
 import os
-import atexit
+
+from . import utils
 
 appconfig=configparser.ConfigParser()
 appconfig.read("serverconfig.cfg")
@@ -17,10 +19,10 @@ if "url" not in appconfig["MongoDB"]:
 app=Flask(__name__)
 app.config["DEBUG"]=True
 app.config["MONGO_URI"]=appconfig["MongoDB"]["url"]
-if "Flask" in appconfig and "secret_key" in appconfig["Flask"]:
-    app.config["SECRET_KEY"]=appconfig["Flask"]["secret_key"]
-else:
-    app.config["SECRET_KEY"]=os.urandom(32)
+
+app.config["SECRET_KEY"]=utils.read_if_exists(appconfig,"Flask","secret_key",os.urandom(32))
+# 1hr default
+app.config["token_timeout"]=int(utils.read_if_exists(appconfig,"secure_notes","token_timeout",3600))
 
 mongo=PyMongo(app)
 

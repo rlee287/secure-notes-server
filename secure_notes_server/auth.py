@@ -1,4 +1,4 @@
-from secure_notes_server import mongo
+from secure_notes_server import app, mongo
 
 from flask import request, g
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
@@ -7,8 +7,6 @@ from passlib.context import CryptContext
 import os
 import base64
 from datetime import datetime, timedelta
-
-TOKEN_EXPIRATION_DELTA=3600 #1 hour
 
 pwd_context=CryptContext(schemes=["argon2","bcrypt"],
                          deprecated="auto",
@@ -25,7 +23,7 @@ def generate_token(username):
     assert(mongo.db.tokens.count_documents({"username":username})<=1)
 
     tokenstr=base64.b16encode(os.urandom(16)).decode("ascii")
-    expire_time=datetime.utcnow()+timedelta(seconds=TOKEN_EXPIRATION_DELTA)
+    expire_time=datetime.utcnow()+timedelta(seconds=app.config["token_timeout"])
 
     if mongo.db.tokens.count_documents({"username":username})==1:
         document=mongo.db.tokens.find_one({"username":username})

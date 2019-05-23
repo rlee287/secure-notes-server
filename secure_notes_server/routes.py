@@ -15,7 +15,6 @@ valid_password_chars=string.digits+string.ascii_letters+string.punctuation+" "
 @app.route("/login", methods=["POST"])
 @basic_auth.login_required
 def login_token():
-    #username=request.authorization["username"]
     # basic auth stuff already checked password
     try:
         token, expiration=generate_token(g.username)
@@ -64,11 +63,6 @@ def remove_user():
 @app.route("/tokentest")
 @token_auth.login_required
 def test_token():
-    #auth_text=request.headers["Authorization"]
-    #auth_list=auth_text.split()
-    #if auth_list[0]!="Bearer":
-    #    abort(400) # Bad request
-    # Entry already guaranteed to exist by previous token verification stuff
     return g.username
 
 @app.route("/listusers")

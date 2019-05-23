@@ -60,6 +60,7 @@ def remove_user():
     mongo.db.tokens.delete_many({"username":g.username})
     mongo.db.users.find_one_and_delete({"username":g.username})
     # TODO: handle notes
+    return '',204
 
 # Development test endpoints
 @app.route("/tokentest")

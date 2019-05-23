@@ -35,20 +35,16 @@ def logout_token():
 @app.route("/createuser", methods=["POST"])
 def create_user():
     # TODO: add messages for the bad request errors
-    print("Start")
     if any((c not in valid_username_chars for c in request.authorization["username"])):
         abort(400)
-    print("Username contents valid")
     if any((c not in valid_password_chars for c in request.authorization["password"])):
         abort(400)
-    print("Password contents valid")
     if mongo.db.users.count_documents({"username":request.authorization["username"]})!=0:
         cursor=mongo.db.users.find({"username":request.authorization["username"]})
         print(cursor)
         for element in cursor:
             print(element)
         abort(403)
-    print("Username does not exist")
     insert_document={"username":request.authorization["username"],
                      "password":compute_password_hash(request.authorization["password"]),
                      "notelist":list()}

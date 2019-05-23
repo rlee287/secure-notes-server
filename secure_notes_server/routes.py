@@ -34,6 +34,8 @@ def logout_token():
 @app.route("/createuser", methods=["POST"])
 def create_user():
     # TODO: add messages for the bad request errors
+    if request.authorization is None:
+        abort(400)
     if any((c not in valid_username_chars for c in request.authorization["username"])):
         abort(400)
     if any((c not in valid_password_chars for c in request.authorization["password"])):

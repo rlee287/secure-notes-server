@@ -74,3 +74,10 @@ def list_users():
     for item in mongo.db.users.find(dict()):
         retlist.append(item)
     return html.escape(str(retlist))
+
+@app.route("/listnotes")
+def list_notes():
+    retlist=list()
+    for item in mongo.db.notes.find(dict()):
+        retlist.append(item)
+    return html.escape(str(retlist))

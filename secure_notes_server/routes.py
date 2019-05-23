@@ -10,6 +10,8 @@ import string
 valid_username_chars=string.digits+string.ascii_letters+string.punctuation+" "
 valid_password_chars=string.digits+string.ascii_letters+string.punctuation+" "
 
+# Login and logout
+
 @app.route("/login", methods=["POST"])
 @basic_auth.login_required
 def login_token():
@@ -28,22 +30,7 @@ def logout_token():
     assert mongo.db.tokens.count_documents({"username":g.username})==0
     return '',204
 
-@app.route("/tokentest")
-@token_auth.login_required
-def test_token():
-    #auth_text=request.headers["Authorization"]
-    #auth_list=auth_text.split()
-    #if auth_list[0]!="Bearer":
-    #    abort(400) # Bad request
-    # Entry already guaranteed to exist by previous token verification stuff
-    return g.username
-
-@app.route("/listusers")
-def list_users():
-    retlist=list()
-    for item in mongo.db.users.find(dict()):
-        retlist.append(item)
-    return html.escape(str(retlist))
+# User creation and deletion
 
 @app.route("/createuser", methods=["POST"])
 def create_user():
@@ -69,6 +56,28 @@ def create_user():
     return '',204
 
 @app.route("/deleteuser", methods=["POST"])
+@token_auth.login_required
 def remove_user():
-    #if request.headers[]
-    pass
+    assert(mongo.db.users.count_documents({"username":g.username})<=1)
+    # Make sure to delete all in case there is more than one entry
+    mongo.db.tokens.delete_many({"username":g.username})
+    mongo.db.users.find_one_and_delete({"username":g.username})
+    # TODO: handle notes
+
+# Development test endpoints
+@app.route("/tokentest")
+@token_auth.login_required
+def test_token():
+    #auth_text=request.headers["Authorization"]
+    #auth_list=auth_text.split()
+    #if auth_list[0]!="Bearer":
+    #    abort(400) # Bad request
+    # Entry already guaranteed to exist by previous token verification stuff
+    return g.username
+
+@app.route("/listusers")
+def list_users():
+    retlist=list()
+    for item in mongo.db.users.find(dict()):
+        retlist.append(item)
+    return html.escape(str(retlist))

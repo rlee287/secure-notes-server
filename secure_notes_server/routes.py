@@ -31,10 +31,13 @@ def logout_token():
 
 # User creation and deletion
 
+@app.route("/<user>",methods=["POST"])
 @app.route("/createuser", methods=["POST"])
-def create_user():
+def create_user(user=None):
     # TODO: add messages for the bad request errors
     if request.authorization is None:
+        abort(400)
+    if user is not None and user!=request.authorization["username"]:
         abort(400)
     if any((c not in valid_username_chars for c in request.authorization["username"])):
         abort(400)
@@ -50,11 +53,14 @@ def create_user():
                      "password":compute_password_hash(request.authorization["password"]),
                      "notelist":list()}
     mongo.db.users.insert_one(insert_document)
-    return '',204
+    return '',201
 
 @app.route("/deleteuser", methods=["POST"])
+@app.route("/<user>", methods=["DELETE"])
 @token_auth.login_required
-def remove_user():
+def remove_user(user=None):
+    if user is not None and user!=g.username:
+        abort(400)
     assert(mongo.db.users.count_documents({"username":g.username})<=1)
     # Make sure to delete all in case there is more than one entry
     mongo.db.tokens.delete_many({"username":g.username})

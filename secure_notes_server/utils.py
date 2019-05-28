@@ -1,8 +1,11 @@
 import base64
 import json
 
+def check_if_exists(parserobj, section, item):
+    return section in parserobj and item in parserobj[section]
+
 def read_if_exists(parserobj, section, item, default_value=None):
-    if section in parserobj and item in parserobj[section]:
+    if check_if_exists(parserobj, section, item):
         return parserobj[section][item]
     else:
         return default_value

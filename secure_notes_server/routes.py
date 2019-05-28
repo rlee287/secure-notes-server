@@ -113,7 +113,8 @@ def retrieve_note(user,id_):
         abort(404)
     if g.username not in noteobj["userlist"]:
         abort(403)
-    return jsonify(utils.sanitize_for_json(noteobj))
+    base64_required=(noteobj["storage_format"]!="plain")
+    return jsonify(utils.sanitize_for_json(noteobj, base64_required))
 
 @app.route("/<user>/notes")
 @token_auth.login_required

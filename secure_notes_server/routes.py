@@ -7,6 +7,7 @@ from flask import request, abort, jsonify, g
 import bson
 
 from datetime import datetime
+import hmac
 import html
 import string
 
@@ -92,9 +93,15 @@ def create_note(user):
         "text":bytes(),
         "storage_format":jsonobj["storage_format"]
     }
-    #TODO: validator fields in header
     insert_result=mongo.db.notes.insert_one(insert_document)
-    return jsonify({"id":str(insert_result.inserted_id)}), 201
+    
+    etag_val=utils.compute_etag(app.config["SECRET_KEY"],
+                                bson.BSON.encode(insert_document))
+    jsonresp=jsonify({"id":str(insert_result.inserted_id)})
+    jsonresp.last_modified=insert_document["modified"]
+    jsonresp.set_etag(etag_val)
+    #TODO: validator fields in header
+    return jsonresp, 201
 
 #Retrieval (individual, list)
 @app.route("/<user>/notes/<id_>")
@@ -114,7 +121,12 @@ def retrieve_note(user,id_):
     if g.username not in noteobj["userlist"]:
         abort(403)
     base64_required=(noteobj["storage_format"]!="plain")
-    return jsonify(utils.sanitize_for_json(noteobj, base64_required))
+    etag_val=utils.compute_etag(app.config["SECRET_KEY"],
+                                bson.BSON.encode(noteobj))
+    jsonresp=jsonify(utils.sanitize_for_json(noteobj, base64_required))
+    jsonresp.last_modified=noteobj["modified"]
+    jsonresp.set_etag(etag_val)
+    return jsonresp
 
 @app.route("/<user>/notes")
 @token_auth.login_required

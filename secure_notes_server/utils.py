@@ -1,4 +1,5 @@
 import base64
+import hmac
 import json
 
 def check_if_exists(parserobj, section, item):
@@ -9,6 +10,9 @@ def read_if_exists(parserobj, section, item, default_value=None):
         return parserobj[section][item]
     else:
         return default_value
+
+def compute_etag(key, message):
+    return hmac.new(key, message, "sha256").hexdigest()
 
 def sanitize_for_json(dictobj, use_base64=False):
     retdict=dictobj.copy()

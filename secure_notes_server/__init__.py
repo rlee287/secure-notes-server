@@ -19,7 +19,8 @@ app=Flask(__name__)
 app.config["DEBUG"]=True
 app.config["MONGO_URI"]=appconfig["MongoDB"]["url"]
 
-app.config["SECRET_KEY"]=appconfig["Flask"]["secret_key"]
+#Don't really care about encoding errors
+app.config["SECRET_KEY"]=appconfig["Flask"]["secret_key"].encode("utf-8","ignore")
 # 1hr default
 app.config["token_timeout"]=int(utils.read_if_exists(appconfig,"secure_notes","token_timeout",3600))
 

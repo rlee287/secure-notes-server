@@ -120,11 +120,16 @@ def retrieve_note(user,id_):
         abort(404)
     if g.username not in noteobj["userlist"]:
         abort(403)
-    base64_required=(noteobj["storage_format"]!="plain")
     etag_val=utils.compute_etag(app.config["SECRET_KEY"],
                                 bson.BSON.encode(noteobj))
+    if etag_val in flask.request.if_match \
+            and noteobj["modified"]==flask.request.if_modified_since:
+        return '',304
+    modified_time=noteobj["modified"]
+    del noteobj["modified"]
+    base64_required=(noteobj["storage_format"]!="plain")
     jsonresp=jsonify(utils.sanitize_for_json(noteobj, base64_required))
-    jsonresp.last_modified=noteobj["modified"]
+    jsonresp.last_modified=modified_time
     jsonresp.set_etag(etag_val)
     return jsonresp
 

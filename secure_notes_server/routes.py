@@ -114,7 +114,7 @@ def retrieve_note(user,id_):
         if not bson.objectid.ObjectId.is_valid(id_):
             raise bson.errors.InvalidId()
     except bson.errors.InvalidId:
-        abort(400)
+        abort(404)
     noteobj=mongo.db.notes.find_one(id_obj)
     if noteobj is None:
         abort(404)

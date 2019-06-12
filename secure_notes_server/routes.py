@@ -122,7 +122,7 @@ def retrieve_note(user,id_):
         abort(403)
     etag_val=utils.compute_etag(app.config["SECRET_KEY"],
                                 bson.BSON.encode(noteobj))
-    if etag_val in flask.request.if_match \
+    if etag_val in request.if_match \
             and noteobj["modified"]==flask.request.if_modified_since:
         return '',304
     modified_time=noteobj["modified"]

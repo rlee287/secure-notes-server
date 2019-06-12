@@ -142,7 +142,7 @@ def get_note_list(user):
     cursor=mongo.db.notes.find({"userlist":{"$all":[user]}})
     for doc in cursor:
         retlist.append(str(doc["_id"]))
-    return html.escape(str(retlist))
+    return jsonify(retlist)
 
 #Updates
 #TODO

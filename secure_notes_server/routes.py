@@ -145,7 +145,57 @@ def get_note_list(user):
     return jsonify(retlist)
 
 #Updates
-#TODO
+@app.route("/<user>/notes/<id_>", methods=["PATCH"])
+@token_auth.login_required
+def update_note(user,id_):
+    if user!=g.username:
+        abort(400)
+
+    try:
+        id_obj=bson.objectid.ObjectId(id_)
+        if not bson.objectid.ObjectId.is_valid(id_):
+            raise bson.errors.InvalidId()
+    except bson.errors.InvalidId:
+        abort(404)
+
+    #Check if note exists and user authorized to update it
+    orig_note=mongo.db.notes.find_one(id_obj)
+    if orig_note is None:
+        abort(404)
+    if g.username not in orig_note["userlist"]:
+        abort(403)
+
+    jsonobj=request.json
+    if jsonobj is None:
+        abort(400)
+    #Check ETags and such to prevent the lost update problem
+    etag_val=utils.compute_etag(app.config["SECRET_KEY"],
+                                bson.BSON.encode(orig_note))
+    if not (request.if_match and request.if_modified_since):
+        abort(428)
+    #If-Modified-Since has only second resolution
+    orig_last_modified=orig_note["modified"].replace(microsecond=0)
+    if not (etag_val in request.if_match
+            and orig_last_modified==request.if_modified_since):
+        abort(412)
+
+    set_dict=dict()
+    storage_format=jsonobj.get("storage_format",orig_note["storage_format"])
+    for attribute_check in ["userlist","storage_format"]:
+        if attribute_check in jsonobj:
+            set_dict[attribute_check]=jsonobj[attribute_check]
+    for attribute_check in ["title","text"]:
+        if attribute_check in jsonobj:
+            json_text=jsonobj[attribute_check].encode("utf-8")
+            base64_required=(storage_format!="plain")
+            if base64_required:
+                set_dict[attribute_check]=base64.b64decode(json_text)
+            else:
+                set_dict[attribute_check]=json_text
+    set_dict["modified"]=datetime.utcnow()
+    print(set_dict)
+    mongo.db.notes.update_one({"_id":id_obj},{"$set":set_dict})
+    return '', 204
 
 #Deletion
 @app.route("/<user>/notes/<id_>", methods=["DELETE"])

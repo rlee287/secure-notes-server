@@ -88,7 +88,7 @@ def create_note(user):
     # FINISH
     insert_document={
         "title":jsonobj["title"].encode("utf-8"),
-        "userlist":[g.username],
+        "userlist":[utils.find_id_from_user(mongo.db.users,user)],
         "modified":datetime.utcnow(),
         "text":bytes(),
         "storage_format":jsonobj["storage_format"]
@@ -118,7 +118,7 @@ def retrieve_note(user,id_):
     noteobj=mongo.db.notes.find_one(id_obj)
     if noteobj is None:
         abort(404)
-    if g.username not in noteobj["userlist"]:
+    if utils.find_id_from_user(mongo.db.users,user) not in noteobj["userlist"]:
         abort(403)
     etag_val=utils.compute_etag(app.config["SECRET_KEY"],
                                 bson.BSON.encode(noteobj))
@@ -127,6 +127,11 @@ def retrieve_note(user,id_):
         return '',304
     modified_time=noteobj["modified"]
     del noteobj["modified"]
+    #If this recurs enough, use functools.partial for this?
+    noteobj["userlist"]=list(map(
+        lambda userid:utils.find_user_from_id(mongo.db.users,userid),
+        noteobj["userlist"]))
+
     base64_required=(noteobj["storage_format"]!="plain")
     jsonresp=jsonify(utils.sanitize_for_json(noteobj, base64_required))
     jsonresp.last_modified=modified_time
@@ -139,7 +144,10 @@ def get_note_list(user):
     if user!=g.username:
         abort(400)
     retlist=list()
-    cursor=mongo.db.notes.find({"userlist":{"$all":[user]}})
+    cursor=mongo.db.notes.find(
+        {"userlist":
+            {"$all":[utils.find_id_from_user(mongo.db.users,user)]}
+        })
     for doc in cursor:
         retlist.append(str(doc["_id"]))
     return jsonify(retlist)
@@ -158,11 +166,11 @@ def update_note(user,id_):
     except bson.errors.InvalidId:
         abort(404)
 
-    #Check if note exists and user authorized to update it
+    #Check if note exists and if user is authorized to update it
     orig_note=mongo.db.notes.find_one(id_obj)
     if orig_note is None:
         abort(404)
-    if g.username not in orig_note["userlist"]:
+    if utils.find_id_from_user(mongo.db.users,user) not in orig_note["userlist"]:
         abort(403)
 
     jsonobj=request.json
@@ -181,7 +189,7 @@ def update_note(user,id_):
 
     set_dict=dict()
     storage_format=jsonobj.get("storage_format",orig_note["storage_format"])
-    for attribute_check in ["userlist","storage_format"]:
+    for attribute_check in ["storage_format"]:
         if attribute_check in jsonobj:
             set_dict[attribute_check]=jsonobj[attribute_check]
     for attribute_check in ["title","text"]:
@@ -192,6 +200,12 @@ def update_note(user,id_):
                 set_dict[attribute_check]=base64.b64decode(json_text)
             else:
                 set_dict[attribute_check]=json_text
+    #If this recurs enough, use functools.partial for this?
+    set_dict["userlist"]=list(map(
+        lambda userid:utils.find_id_from_user(mongo.db.users,userid),
+        jsonobj["userlist"]))
+    if None in set_dict["userlist"] or len(set_dict["userlist"])==0:
+        abort(400)
     set_dict["modified"]=datetime.utcnow()
     print(set_dict)
     mongo.db.notes.update_one({"_id":id_obj},{"$set":set_dict})
@@ -212,7 +226,7 @@ def delete_note(user, id_):
     noteobj=mongo.db.notes.find_one(id_obj)
     if noteobj is None:
         abort(404)
-    if g.username not in noteobj["userlist"]:
+    if utils.find_id_from_user(mongo.db.users,user) not in noteobj["userlist"]:
         abort(403)
     # Document guaranteed to exist by previous find_one call
     mongo.db.notes.delete_one({"_id":id_obj})

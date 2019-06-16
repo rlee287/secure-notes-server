@@ -217,24 +217,3 @@ def delete_note(user, id_):
     # Document guaranteed to exist by previous find_one call
     mongo.db.notes.delete_one({"_id":id_obj})
     return '', 204
-
-# Development test endpoints
-
-@app.route("/tokentest")
-@token_auth.login_required
-def test_token():
-    return g.username
-
-@app.route("/listusers")
-def list_users():
-    retlist=list()
-    for item in mongo.db.users.find(dict()):
-        retlist.append(item)
-    return html.escape(str(retlist))
-
-@app.route("/listnotes")
-def list_notes():
-    retlist=list()
-    for item in mongo.db.notes.find(dict()):
-        retlist.append(item)
-    return html.escape(str(retlist))

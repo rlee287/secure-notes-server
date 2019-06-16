@@ -11,9 +11,6 @@ import hmac
 import html
 import string
 
-valid_username_chars=string.digits+string.ascii_letters+string.punctuation+" "
-valid_password_chars=string.digits+string.ascii_letters+string.punctuation+" "
-
 # Login and logout
 
 @app.route("/login", methods=["POST"])
@@ -42,10 +39,6 @@ def create_user(user=None):
     if request.authorization is None:
         abort(400)
     if user is not None and user!=request.authorization["username"]:
-        abort(400)
-    if any((c not in valid_username_chars for c in request.authorization["username"])):
-        abort(400)
-    if any((c not in valid_password_chars for c in request.authorization["password"])):
         abort(400)
     if mongo.db.users.count_documents({"username":request.authorization["username"]})!=0:
         cursor=mongo.db.users.find({"username":request.authorization["username"]})

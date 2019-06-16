@@ -4,9 +4,10 @@ from flask import request, g
 from flask_httpauth import HTTPBasicAuth, HTTPTokenAuth
 from passlib.context import CryptContext
 
-import os
 import base64
 from datetime import datetime, timedelta
+import hashlib
+import os
 
 pwd_context=CryptContext(schemes=["argon2","bcrypt"],
                          deprecated="auto",
@@ -22,7 +23,9 @@ def generate_token(username):
         raise ValueError("Invalid username provided")
     assert(mongo.db.tokens.count_documents({"username":username})<=1)
 
-    tokenstr=base64.b16encode(os.urandom(16)).decode("ascii")
+    tokenstr=base64.b16encode(os.urandom(32))
+    tokenhash=hashlib.sha256(tokenstr).digest()
+    tokenstr=tokenstr.decode("ascii")
     expire_time=datetime.utcnow()+timedelta(seconds=app.config["token_timeout"])
 
     if mongo.db.tokens.count_documents({"username":username})==1:
@@ -32,22 +35,28 @@ def generate_token(username):
         mongo.db.tokens.update_one({"username":username},
                                    {"$set":
                                         {"expire_time":expire_time,
-                                        "token":tokenstr
+                                        "tokenhash":tokenhash
                                         }
                                    })
         return (tokenstr, expire_time)
     mongo.db.tokens.insert_one({"expire_time":expire_time,
-                                "token":tokenstr,
+                                "tokenhash":tokenhash,
                                 "username":username
                                })
     return (tokenstr, expire_time)
 
 @token_auth.verify_token
 def validate_token(token):
-    assert(mongo.db.tokens.count_documents({"token":token})<=1)
-    if mongo.db.tokens.count_documents({"token":token})==0:
+    try:
+        tokenstr=token.encode("ascii")
+        int(tokenstr,16) #Check that token is hex characters
+    except (UnicodeEncodeError, ValueError):
         return False
-    document=mongo.db.tokens.find_one({"token":token})
+    tokenhash=hashlib.sha256(tokenstr).digest()
+    assert(mongo.db.tokens.count_documents({"tokenhash":tokenhash})<=1)
+    if mongo.db.tokens.count_documents({"tokenhash":tokenhash})==0:
+        return False
+    document=mongo.db.tokens.find_one({"tokenhash":tokenhash})
     if document["expire_time"]<datetime.utcnow():
         return False
     g.username=document["username"]

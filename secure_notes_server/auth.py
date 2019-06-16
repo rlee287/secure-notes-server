@@ -19,10 +19,13 @@ token_auth=HTTPTokenAuth("Bearer")
 # TODO: check datetime comparison directions
 
 def generate_token(username):
+    #Should not happen because of Basic Auth check but check anyway
     if mongo.db.users.count_documents({"username":username})==0:
         raise ValueError("Invalid username provided")
     assert(mongo.db.tokens.count_documents({"username":username})<=1)
 
+    #Generate hex token but store hash in database
+    #This prevents tokens from being stolen by db compromise
     tokenstr=base64.b16encode(os.urandom(32))
     tokenhash=hashlib.sha256(tokenstr).digest()
     tokenstr=tokenstr.decode("ascii")
@@ -52,6 +55,7 @@ def validate_token(token):
         int(tokenstr,16) #Check that token is hex characters
     except (UnicodeEncodeError, ValueError):
         return False
+    #Hash token and compare to hash in database
     tokenhash=hashlib.sha256(tokenstr).digest()
     assert(mongo.db.tokens.count_documents({"tokenhash":tokenhash})<=1)
     if mongo.db.tokens.count_documents({"tokenhash":tokenhash})==0:

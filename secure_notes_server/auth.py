@@ -68,6 +68,8 @@ def validate_token(token):
 
 @basic_auth.verify_password
 def validate_password(username, password):
+    if request.authorization is None:
+        return False
     username_count=mongo.db.users.count_documents({"username":request.authorization["username"]})
     assert(username_count<=1)
     if username_count==0:

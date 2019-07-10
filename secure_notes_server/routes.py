@@ -115,8 +115,10 @@ def retrieve_note(user,id_):
         abort(403)
     etag_val=utils.compute_etag(app.config["SECRET_KEY"],
                                 bson.BSON.encode(noteobj))
-    if etag_val in request.if_match \
-            and noteobj["modified"]==flask.request.if_modified_since:
+    #If-Modified-Since and related has only second resolution
+    note_last_modified=noteobj["modified"].replace(microsecond=0)
+    if etag_val in request.if_none_match \
+            and note_last_modified==request.if_modified_since:
         return '',304
     modified_time=noteobj["modified"]
     del noteobj["modified"]
@@ -174,10 +176,10 @@ def update_note(user,id_):
                                 bson.BSON.encode(orig_note))
     if not (request.if_match and request.if_modified_since):
         abort(428)
-    #If-Modified-Since has only second resolution
+    #If-Modified-Since and related has only second resolution
     orig_last_modified=orig_note["modified"].replace(microsecond=0)
     if not (etag_val in request.if_match
-            and orig_last_modified==request.if_modified_since):
+            and orig_last_modified==request.if_unmodified_since):
         abort(412)
 
     set_dict=dict()

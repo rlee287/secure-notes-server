@@ -22,8 +22,6 @@ def generate_token(username):
     #Should not happen because of Basic Auth check but check anyway
     if mongo.db.users.count_documents({"username":username})==0:
         raise ValueError("Invalid username provided")
-    assert(mongo.db.tokens.count_documents({"username":username})<=1)
-
     #Generate hex token but store hash in database
     #This prevents tokens from being stolen by db compromise
     tokenstr=base64.b16encode(os.urandom(32))
@@ -31,17 +29,6 @@ def generate_token(username):
     tokenstr=tokenstr.decode("ascii")
     expire_time=datetime.utcnow()+timedelta(seconds=app.config["token_timeout"])
 
-    if mongo.db.tokens.count_documents({"username":username})==1:
-        document=mongo.db.tokens.find_one({"username":username})
-        if document["expire_time"]>datetime.utcnow():
-            raise ValueError("User was already given token")
-        mongo.db.tokens.update_one({"username":username},
-                                   {"$set":
-                                        {"expire_time":expire_time,
-                                        "tokenhash":tokenhash
-                                        }
-                                   })
-        return (tokenstr, expire_time)
     mongo.db.tokens.insert_one({"expire_time":expire_time,
                                 "tokenhash":tokenhash,
                                 "username":username

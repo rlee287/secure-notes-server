@@ -7,6 +7,7 @@ from flask import request, abort, jsonify, g
 import bson
 
 from datetime import datetime
+import hashlib
 import hmac
 import html
 import string
@@ -26,8 +27,12 @@ def login_token():
 @app.route("/logout", methods=["POST"])
 @token_auth.login_required
 def logout_token():
-    mongo.db.tokens.find_one_and_delete({"username":g.username})
-    assert mongo.db.tokens.count_documents({"username":g.username})==0
+    auth_header=request.headers["Authorization"]
+    if len(auth_header)<7 or auth_header[:7]!="Bearer ":
+        abort(401)
+    tokenstr=auth_header[7:].encode("ascii")
+    tokenhash=hashlib.sha256(tokenstr).digest()
+    mongo.db.tokens.find_one_and_delete({"username":g.username,"tokenhash":tokenhash})
     return '',204
 
 # User creation and deletion

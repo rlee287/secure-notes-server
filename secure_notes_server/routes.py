@@ -179,9 +179,9 @@ def update_note(user,id_):
     #Check ETags and such to prevent the lost update problem
     etag_val=utils.compute_etag(app.config["SECRET_KEY"],
                                 bson.BSON.encode(orig_note))
-    if not (request.if_match and request.if_modified_since):
+    if not (request.if_match and request.if_unmodified_since):
         abort(428)
-    #If-Modified-Since and related has only second resolution
+    #If-Unmodified-Since and related has only second resolution
     orig_last_modified=orig_note["modified"].replace(microsecond=0)
     if not (etag_val in request.if_match
             and orig_last_modified==request.if_unmodified_since):

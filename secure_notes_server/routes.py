@@ -3,7 +3,8 @@ from .auth import generate_token, validate_token, validate_password, compute_pas
 from .auth import basic_auth, token_auth
 from . import utils
 
-from flask import request, abort, jsonify, g
+from flask import request, abort, jsonify, make_response, g
+from pymongo.collection import ReturnDocument
 import bson
 
 from datetime import datetime
@@ -201,15 +202,22 @@ def update_note(user,id_):
             else:
                 set_dict[attribute_check]=json_text
     #If this recurs enough, use functools.partial for this?
-    set_dict["userlist"]=list(map(
-        lambda userid:utils.find_id_from_user(mongo.db.users,userid),
-        jsonobj["userlist"]))
-    if None in set_dict["userlist"] or len(set_dict["userlist"])==0:
-        abort(400)
-    set_dict["modified"]=datetime.utcnow()
+    if "userlist" in jsonobj:
+        set_dict["userlist"]=list(map(
+            lambda userid:utils.find_id_from_user(mongo.db.users,userid),
+            jsonobj["userlist"]))
+        if None in set_dict["userlist"] or len(set_dict["userlist"])==0:
+            abort(400)
+    modified_time = datetime.utcnow()
+    set_dict["modified"]=modified_time
     print(set_dict)
-    mongo.db.notes.update_one({"_id":id_obj},{"$set":set_dict})
-    return '', 204
+    new_doc=mongo.db.notes.find_one_and_update({"_id":id_obj},{"$set":set_dict},
+            return_document = ReturnDocument.AFTER)
+    empty_response = make_response()
+    empty_response.last_modified = modified_time
+    empty_response.set_etag(utils.compute_etag(app.config["SECRET_KEY"],
+                            bson.BSON.encode(new_doc)))
+    return empty_response
 
 #Deletion
 @app.route("/<user>/notes/<id_>", methods=["DELETE"])
